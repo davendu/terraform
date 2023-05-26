@@ -54,12 +54,12 @@ func (b *Cloud) opApply(stopCtx, cancelCtx context.Context, op *backend.Operatio
 		))
 	}
 
-	if op.PlanFile != nil {
+	if op.PlanFile.IsLocal() {
 		diags = diags.Append(tfdiags.Sourceless(
 			tfdiags.Error,
-			"Applying a saved plan is currently not supported",
-			`Terraform Cloud currently requires configuration to be present and `+
-				`does not accept an existing saved plan as an argument at this time.`,
+			"Applying a saved local plan is not supported",
+			`Terraform Cloud can apply a saved cloud plan, or create a new plan when `+
+				`configuration is present. It cannot apply a saved local plan.`,
 		))
 	}
 
@@ -79,8 +79,16 @@ func (b *Cloud) opApply(stopCtx, cancelCtx context.Context, op *backend.Operatio
 		return nil, diags.Err()
 	}
 
-	// Run the plan phase.
-	r, err := b.plan(stopCtx, cancelCtx, op, w)
+	var r *tfe.Run
+	var err error
+
+	if op.PlanFile.IsCloud() {
+		// Fetch the run referenced in the saved plan bookmark.
+		r, err = b.client.Runs.Read(stopCtx, op.PlanFile.Cloud.RunID)
+	} else {
+		// Run the plan phase.
+		r, err = b.plan(stopCtx, cancelCtx, op, w)
+	}
 	if err != nil {
 		return r, err
 	}
