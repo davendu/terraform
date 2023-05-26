@@ -12,12 +12,12 @@ type WrappedPlanFile struct {
 	Cloud *cloudplan.SavedPlanBookmark
 }
 
-func (w WrappedPlanFile) IsLocal() bool {
-	return w.Local != nil
+func (w *WrappedPlanFile) IsLocal() bool {
+	return w != nil && w.Local != nil
 }
 
-func (w WrappedPlanFile) IsCloud() bool {
-	return w.Cloud != nil
+func (w *WrappedPlanFile) IsCloud() bool {
+	return w != nil && w.Cloud != nil
 }
 
 // OpenWrapped loads a local or cloud planfile from a specified file path, or
