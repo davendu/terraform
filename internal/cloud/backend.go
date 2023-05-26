@@ -75,6 +75,10 @@ type Cloud struct {
 	// organization is the organization that contains the target workspaces.
 	organization string
 
+	// runId is only set to a non-zero value if we're deriving organization and
+	// workspace names from a saved plan during initial configuration.
+	runId string
+
 	// WorkspaceMapping contains strategies for mapping CLI workspaces in the working directory
 	// to remote Terraform Cloud workspaces.
 	WorkspaceMapping WorkspaceMapping
@@ -319,8 +323,8 @@ func (b *Cloud) Configure(obj cty.Value) tfdiags.Diagnostics {
 
 	// If we're configuring from a run ID, fill in the missing organization and
 	// workspace names.
-	if val := obj.GetAttr("run_id"); !val.IsNull() {
-		runDiags := b.setOrgAndWorkspaceFromRun(val.AsString())
+	if b.runId != "" {
+		runDiags := b.setOrgAndWorkspaceFromRun(b.runId)
 		diags = diags.Append(runDiags)
 		if diags.HasErrors() {
 			return diags
@@ -459,12 +463,13 @@ func (b *Cloud) ConfigureFromSavedPlan(hostname, runId string) tfdiags.Diagnosti
 	// our receiver that we missed out on earlier.
 	b.WorkspaceMapping = WorkspaceMapping{Name: ""}
 
-	// Construct a cty.Value that looks like a mostly empty cloud block, plus an
-	// extra run_id key that can never exist in a real cloud block.
+	// Construct a cty.Value that looks like a mostly empty cloud block.
 	obj := cty.ObjectVal(map[string]cty.Value{
 		"hostname": cty.StringVal(hostname),
-		"run_id":   cty.StringVal(runId),
 	})
+
+	// Set the runId field on self so Configure can see it.
+	b.runId = runId
 
 	// And, let Configure take over from here:
 	return b.Configure(obj)
