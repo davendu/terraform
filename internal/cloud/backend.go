@@ -464,9 +464,15 @@ func (b *Cloud) ConfigureFromSavedPlan(hostname, runId string) tfdiags.Diagnosti
 	b.WorkspaceMapping = WorkspaceMapping{Name: ""}
 
 	// Construct a cty.Value that looks like a mostly empty cloud block.
-	obj := cty.ObjectVal(map[string]cty.Value{
+	v := cty.ObjectVal(map[string]cty.Value{
 		"hostname": cty.StringVal(hostname),
 	})
+	obj, err := b.ConfigSchema().CoerceValue(v)
+	if err != nil {
+		var diags tfdiags.Diagnostics
+		diags = diags.Append(err)
+		return diags
+	}
 
 	// Set the runId field on self so Configure can see it.
 	b.runId = runId

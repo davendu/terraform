@@ -81,6 +81,7 @@ func (b *Cloud) opApply(stopCtx, cancelCtx context.Context, op *backend.Operatio
 
 	var r *tfe.Run
 	var err error
+	log.Printf("[INFO] Made it to run check...")
 
 	if op.PlanFile.IsCloud() {
 		// Fetch the run referenced in the saved plan bookmark.
@@ -92,13 +93,18 @@ func (b *Cloud) opApply(stopCtx, cancelCtx context.Context, op *backend.Operatio
 	if err != nil {
 		return r, err
 	}
+	log.Printf("[INFO] Run check succeeded...")
 
 	// This check is also performed in the plan method to determine if
 	// the policies should be checked, but we need to check the values
 	// here again to determine if we are done and should return.
 	if !r.HasChanges || r.Status == tfe.RunCanceled || r.Status == tfe.RunErrored {
+		log.Printf("[INFO] %v, %v", r.HasChanges, r.Status)
+
 		return r, nil
 	}
+
+	log.Printf("[INFO] Made it to second run read...")
 
 	// Retrieve the run to get its current status.
 	r, err = b.client.Runs.Read(stopCtx, r.ID)
@@ -144,6 +150,8 @@ func (b *Cloud) opApply(stopCtx, cancelCtx context.Context, op *backend.Operatio
 		if err = b.client.Runs.Apply(stopCtx, r.ID, tfe.RunApplyOptions{}); err != nil {
 			return r, generalError("Failed to approve the apply command", err)
 		}
+		log.Printf("[INFO] applied the run!")
+
 	}
 
 	// Retrieve the run to get task stages.
@@ -168,6 +176,8 @@ func (b *Cloud) opApply(stopCtx, cancelCtx context.Context, op *backend.Operatio
 	if err != nil {
 		return r, err
 	}
+
+	log.Printf("[INFO] Made it to the bottom...?")
 
 	return r, nil
 }
